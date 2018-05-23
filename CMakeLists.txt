@@ -1,7 +1,7 @@
-cmake_minimum_required(VERSION 2.8.12)
+cmake_minimum_required(VERSION 2.9)
 project(NOAADataEngine)
 
-set(CMAKE_INCLUDE_CURRENT_DIR ON)
+#set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_AUTOMOC ON)
 
 add_definitions(-std=c++14)
@@ -18,8 +18,8 @@ include_directories (
     )
 
 set (MOC_HEADERS
-    "dataengine.h"
-    "ipcinterface.h"
+    "include/noaa/dataengine.h"
+    "include/noaa/ipcinterface.h"
     )
 
 set (SOURCES

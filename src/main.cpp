@@ -1,5 +1,5 @@
-#include <dataengine.h>
-#include <ipcinterface.h>
+#include <noaa/dataengine.h>
+#include <noaa/ipcinterface.h>
 #include <QtCore/QCoreApplication>
 
 int main(int argc, char *argv[])
