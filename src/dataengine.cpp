@@ -1,5 +1,4 @@
 #include <noaa/dataengine.h>
-#include <QtCore/QProcessEnvironment>
 #include <QtCore/QDebug>
 
 namespace {
@@ -34,7 +33,7 @@ DataEngine::DataEngine(QObject* parent            ,
   m_latbottom  (latbottom),
   m_gWGrib2Proc(this)
 {
-    if(download()) convert();
+    download();
 }
 
 bool DataEngine::download()
@@ -46,8 +45,20 @@ bool DataEngine::download()
 
 bool DataEngine::convert()
 {
+#   ifdef Q_OS_UNIX
+    QFile file("/usr/bin/wgrib2");
+#   else
+    QFile file("C:\Program Files\wgrib2\wgrib2");
+#   endif
+
+    if(!file.exists())
+    {
+        qDebug() << "wgrib2 convertor not found!";
+        return false;
+    }
+
     m_gWGrib2Proc.start("wgrib2 grib2 -undefine out-box " + m_lonleft + ":" +
-                        m_lonright + " " + m_lattop + ":" + m_latbottom + " -csv grib2_csv.txt");
+                        m_lonright + " " + m_lattop + ":" + m_latbottom + " -csv grib2.csv");
     m_gWGrib2Proc.waitForFinished();
 
     return m_gWGrib2Proc.exitCode() == 0;
@@ -62,10 +73,6 @@ void DataEngine::replyFinished(QNetworkReply* reply)
     }
     else
     {
-        QProcessEnvironment env (QProcessEnvironment::systemEnvironment());
-
-        qDebug() << env.value("HOME");
-
         qDebug() << reply->header(QNetworkRequest::ContentTypeHeader)  .toString   ();
         qDebug() << reply->header(QNetworkRequest::LastModifiedHeader) .toDateTime ().toString();;
         qDebug() << reply->header(QNetworkRequest::ContentLengthHeader).toULongLong();
@@ -84,11 +91,13 @@ void DataEngine::replyFinished(QNetworkReply* reply)
                 file.write(reply->readAll());
                 file.flush();
                 file.close();
+                convert   ();
             }
         }
     }
 
     reply->deleteLater();
+    exit(0);
 }
 
 DataEngine::string_type DataEngine::urlImplode(const string_type& start_date,

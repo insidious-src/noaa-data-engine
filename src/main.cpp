@@ -5,12 +5,12 @@
 int main(int argc, char *argv[])
 {
     QCoreApplication app(argc, argv);
-    DataEngine(nullptr, "009", "24", "24.01", "43", "43.01");
+    DataEngine data(nullptr, "009", "24", "24.01", "43", "43.01");
 
-    QDBusConnection connection = QDBusConnection::sessionBus();
-    connection.registerService("org.SolarPower");
+    //QDBusConnection connection = QDBusConnection::sessionBus();
+    //connection.registerService("org.SolarPower");
 
-    IPCInterface iface(connection);
+    //IPCInterface iface(connection);
 
     return app.exec();
 }
