@@ -5,7 +5,6 @@
 #include <QtNetwork/QNetworkRequest>
 #include <QtNetwork/QNetworkReply>
 #include <QtCore/QProcess>
-#include <QtCore/QTime>
 #include <QtCore/QUrl>
 #include <QtCore/QDateTime>
 #include <QtCore/QFile>
@@ -26,34 +25,49 @@ class DataEngine : public QObject
 public:
     typedef QString string_type;
 
-    DataEngine(QObject* parent            ,
-               const string_type& hrs_fwrd,
+    DataEngine(QDate const&       date    ,
+               int                hrs_fwrd,
                const string_type& lonleft ,
                const string_type& lonright,
                const string_type& lattop  ,
-               const string_type& latbottom);
+               const string_type& latbottom,
+               const int          timezone = 2);
 
     bool download();
     bool convert ();
 
-    string_type urlToString() const { return m_url.toString(); }
+    string_type urlToString() const noexcept
+    { return m_url.toString(); }
 
-    static string_type urlImplode (const string_type& start_date,
-                                   const string_type& hrf,
-                                   const QList<string_type>& coord);
+    string_type dateToString() noexcept
+    { return m_datetime.date().toString("yyyyMMdd") + "00"; }
 
-    static string_type date() { return QDate::currentDate().toString("yyyyMMdd") + "00"; }
-    static string_type hour() { return QTime::currentTime().toString("hh");              }
+    string_type fileName() noexcept
+    { return "grib2." + dateToString() + ".f" + hoursFwdString(m_datetime.time().hour()); }
+
+    string_type fileNameUTC(int zone) noexcept
+    { return "grib2." + dateToString() + ".f" + hoursFwdString(m_datetime.time().hour() + zone); }
+
+    static string_type hoursFwdString(int const hour_fwd) noexcept
+    {
+        return 100 > hour_fwd && hour_fwd >= 10 ? "0"  + QString::number(hour_fwd)               :
+                                                hour_fwd < 10 ? "00" + QString::number(hour_fwd) :
+                                                QString::number(hour_fwd);
+    }
 
 public slots:
     void replyFinished(QNetworkReply* m_reply);
 
 private:
+    static uint          sm_fileCount;
     QNetworkAccessManager m_mgr { this };
+    QDateTime             m_datetime;
     QUrl                  m_url;
+    int                   m_timezone;
     string_type           m_lonleft, m_lonright, m_lattop, m_latbottom;
     QProcess              m_gWGrib2Proc;
-};
 
+    string_type urlImplode(const QList<string_type>& coord);
+};
 
 #endif // DATAENGINE_H

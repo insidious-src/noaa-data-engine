@@ -1,4 +1,5 @@
 #include <noaa/dataengine.h>
+#include <QtCore/QCoreApplication>
 #include <QtCore/QDebug>
 
 namespace {
@@ -10,7 +11,8 @@ namespace {
 //dir=%2Fgfs.2018032706
 
 static const QString part1      = "http://nomads.ncep.noaa.gov/cgi-bin/filter_gfs_0p25_1hr.pl?file=gfs.t00z.pgrb2.0p25.f";
-static const QString start_vars = "&lev_middle_cloud_layer=on&lev_surface=on&var_DSWRF=on&var_TMP=on&var_TCDC=on";
+//static const QString start_vars = "&lev_middle_cloud_layer=on&lev_surface=on&var_DSWRF=on&var_TMP=on&var_TCDC=on";
+static const QString start_vars = "&var_DSWRF=on";
 static const QString leftlon    = "&leftlon="   ;
 static const QString rightlon   = "&rightlon="  ;
 static const QString toplat     = "&toplat="    ;
@@ -19,14 +21,20 @@ static const QString dir        = "&dir=%2Fgfs.";
 
 } // anonymous
 
-DataEngine::DataEngine(QObject* parent            ,
-                       const string_type& hrs_fwrd,
+uint DataEngine::sm_fileCount { };
+
+
+DataEngine::DataEngine(QDate const&       date    ,
+                       int                hrs_fwrd,
                        const string_type& lonleft ,
                        const string_type& lonright,
                        const string_type& lattop  ,
-                       const string_type& latbottom)
-: QObject(parent),
-  m_url(urlImplode(date (), hrs_fwrd, { lonleft, lonright, lattop, latbottom })),
+                       const string_type& latbottom,
+                       const int          timezone)
+: QObject      (),
+  m_datetime   (date, QTime(hrs_fwrd, 0)),
+  m_url        (urlImplode({ lonleft, lonright, lattop, latbottom })),
+  m_timezone   (timezone),
   m_lonleft    (lonleft)  ,
   m_lonright   (lonright) ,
   m_lattop     (lattop)   ,
@@ -57,8 +65,9 @@ bool DataEngine::convert()
         return false;
     }
 
-    m_gWGrib2Proc.start("wgrib2 grib2 -undefine out-box " + m_lonleft + ":" +
-                        m_lonright + " " + m_lattop + ":" + m_latbottom + " -csv grib2.csv");
+    m_gWGrib2Proc.start("wgrib2 " + fileNameUTC(m_timezone) + " -undefine out-box " +
+                        m_lonleft + ":" + m_lonright + " " + m_lattop  + ":" + m_latbottom +
+                        " -csv "  + fileNameUTC(m_timezone) + ".csv");
     m_gWGrib2Proc.waitForFinished();
 
     return m_gWGrib2Proc.exitCode() == 0;
@@ -73,16 +82,13 @@ void DataEngine::replyFinished(QNetworkReply* reply)
     }
     else
     {
-        qDebug() << reply->header(QNetworkRequest::ContentTypeHeader)  .toString   ();
-        qDebug() << reply->header(QNetworkRequest::LastModifiedHeader) .toDateTime ().toString();;
-        qDebug() << reply->header(QNetworkRequest::ContentLengthHeader).toULongLong();
-
-        qDebug() << reply->attribute(QNetworkRequest::HttpStatusCodeAttribute  ).toInt   ();
+        qDebug() << m_url.toString();
+        qDebug() << reply->header(QNetworkRequest::ContentTypeHeader).toString();
         qDebug() << reply->attribute(QNetworkRequest::HttpReasonPhraseAttribute).toString();
 
         // isolation brackets
         {
-            QFile file("grib2");
+            QFile file(fileNameUTC(m_timezone));
 
             if(file.exists()) file.remove();
 
@@ -97,15 +103,13 @@ void DataEngine::replyFinished(QNetworkReply* reply)
     }
 
     reply->deleteLater();
-    exit(0);
+    if(++sm_fileCount >= 16) QCoreApplication::quit();
 }
 
-DataEngine::string_type DataEngine::urlImplode(const string_type& start_date,
-                                               const string_type& hrf,
-                                               const QList<string_type>& coord)
+DataEngine::string_type DataEngine::urlImplode(const QList<string_type>& coord)
 {
-    return string_type (part1 + hrf +
-                        start_vars  + leftlon  + coord[0] +
-                        rightlon    + coord[1] + toplat   + coord[2] + bottomlat + coord[3] +
-                        dir         + start_date);
+    return string_type (part1      + hoursFwdString(m_datetime.time().hour()) +
+                        start_vars + leftlon  + coord[0] +
+                        rightlon   + coord[1] + toplat   + coord[2] + bottomlat + coord[3] +
+                        dir        + dateToString());
 }
