@@ -1,6 +1,23 @@
+/*
+ * Copyright 2018 K. Petrov <fymfifa@gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 #ifndef DATAENGINE_H
 #define DATAENGINE_H
 
+#include <noaa/csv.h>
 #include <QtNetwork/QNetworkAccessManager>
 #include <QtNetwork/QNetworkRequest>
 #include <QtNetwork/QNetworkReply>
@@ -10,14 +27,24 @@
 #include <QtCore/QFile>
 #include <QtCore/QList>
 
+union LocationRect
+{
+    typedef QString string_type;
 
-/*http://nomads.ncep.noaa.gov/cgi-bin/filter_gfs.pl?\
-file=gfs.t${hr}z.pgrbf${fhr}.grib2&\
-lev_500_mb=on&lev_700_mb=on&lev_1000_mb=on&\
-var_HGT=on&var_RH=on&var_TMP=on&var_UGRD=on&\
-var_VGRD=on&subregion=&leftlon=250&\
-rightlon=330&toplat=60&bottomlat=20&\
-dir=%2Fgfs.${date}${hr}*/
+    float lonLeft, lonRight, latTop, latBottom;
+    float coord[4];
+
+    constexpr LocationRect () noexcept
+    : coord { }
+    { }
+
+    constexpr LocationRect (float lonleft, float lonright, float lattop, float latbottom) noexcept
+    : coord { lonleft, lonright, lattop, latbottom }
+    { }
+
+    string_type toString (int idx) const
+    { return string_type::number (static_cast<double> (coord[idx])); }
+};
 
 class DataEngine : public QObject
 {
@@ -25,13 +52,11 @@ class DataEngine : public QObject
 public:
     typedef QString string_type;
 
-    DataEngine(QDate const&       date    ,
-               int                hrs_fwrd,
-               const string_type& lonleft ,
-               const string_type& lonright,
-               const string_type& lattop  ,
-               const string_type& latbottom,
-               const int          timezone = 2);
+    DataEngine(QDate const&        date    ,
+               int                 hrs_fwrd,
+               LocationRect const& loc_rect,
+               CSVParser&          csv_parser,
+               const int           timezone = 2);
 
     bool download();
     bool convert ();
@@ -61,13 +86,14 @@ public slots:
 private:
     static uint          sm_fileCount;
     QNetworkAccessManager m_mgr { this };
+    CSVParser*            m_pCsvData;
     QDateTime             m_datetime;
     QUrl                  m_url;
     int                   m_timezone;
-    string_type           m_lonleft, m_lonright, m_lattop, m_latbottom;
+    LocationRect          m_locRect;
     QProcess              m_gWGrib2Proc;
 
-    string_type urlImplode(const QList<string_type>& coord);
+    string_type urlImplode(LocationRect const& coord);
 };
 
 #endif // DATAENGINE_H

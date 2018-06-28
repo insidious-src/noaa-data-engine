@@ -32,6 +32,8 @@ set (SOURCES
     "src/main.cpp"
     "src/dataengine.cpp"
     "src/ipcinterface.cpp"
+    "src/csv.cpp"
+    "src/json.cpp"
     )
 
 QT5_WRAP_CPP(MOC_SRCS ${MOC_HEADERS})
