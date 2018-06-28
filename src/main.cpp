@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#include <noaa/csv.h>
 #include <noaa/json.h>
 #include <noaa/dataengine.h>
 //#include <noaa/ipcinterface.h>
@@ -27,10 +28,11 @@ int main(int argc, char* argv[])
 
     std::shared_ptr<DataEngine> gData[16];
     CSVParser                   gCSV;
+    JsonParser                  gJson(gCSV, "grib2.json");
 
     for(auto i = 0, n = 4; n < 20; ++n, ++i)
     {
-        gData[i].reset(new DataEngine(QDate(2018, 6, 26), n, { 24.5f, 24.5f, 43.25f, 43.25f }, gCSV));
+        gData[i].reset(new DataEngine(QDate(2018, 6, 26), n, { 24.5f, 24.5f, 43.25f, 43.25f }, gJson));
     }
 
     //QDBusConnection connection = QDBusConnection::sessionBus();

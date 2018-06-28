@@ -17,7 +17,7 @@
 #ifndef JSON_H
 #define JSON_H
 
-#include <QtCore/QJsonDocument>
+#include <QtCore/QString>
 
 class CSVParser;
 
@@ -26,12 +26,19 @@ class JsonParser
 public:
     typedef QString string_type;
 
-    JsonParser(CSVParser const& csv, string_type const& file);
+    bool save ();
+
+    JsonParser(CSVParser& csv, string_type const& file_path)
+    : m_strFilePath (file_path),
+      m_pCsv  (&csv)
+    { }
+
+    CSVParser& csv() const noexcept
+    { return *m_pCsv; }
 
 private:
-    QJsonDocument    m_gJsonDoc   ;
-    string_type      m_strFilePath;
-    CSVParser const* m_pCsvParser ;
+    string_type m_strFilePath;
+    CSVParser*  m_pCsv       ;
 };
 
 #endif // JSON_H

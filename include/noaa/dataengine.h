@@ -17,7 +17,7 @@
 #ifndef DATAENGINE_H
 #define DATAENGINE_H
 
-#include <noaa/csv.h>
+#include <noaa/json.h>
 #include <QtNetwork/QNetworkAccessManager>
 #include <QtNetwork/QNetworkRequest>
 #include <QtNetwork/QNetworkReply>
@@ -46,6 +46,8 @@ union LocationRect
     { return string_type::number (static_cast<double> (coord[idx])); }
 };
 
+// ==========================================================
+
 class DataEngine : public QObject
 {
     Q_OBJECT
@@ -55,7 +57,7 @@ public:
     DataEngine(QDate const&        date    ,
                int                 hrs_fwrd,
                LocationRect const& loc_rect,
-               CSVParser&          csv_parser,
+               JsonParser&         json_parser,
                const int           timezone = 2);
 
     bool download();
@@ -86,7 +88,7 @@ public slots:
 private:
     static uint          sm_fileCount;
     QNetworkAccessManager m_mgr { this };
-    CSVParser*            m_pCsvData;
+    JsonParser*           m_pJson;
     QDateTime             m_datetime;
     QUrl                  m_url;
     int                   m_timezone;

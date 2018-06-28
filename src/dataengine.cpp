@@ -15,6 +15,7 @@
  */
 
 #include <noaa/dataengine.h>
+#include <noaa/csv.h>
 #include <QtCore/QCoreApplication>
 #include <QtCore/QDebug>
 #include <iostream>
@@ -32,16 +33,19 @@ static const QString dir        = "&dir=%2Fgfs.";
 
 } // anonymous
 
+// ==========================================================
+
 uint DataEngine::sm_fileCount { };
 
+// ==========================================================
 
 DataEngine::DataEngine(QDate const&        date    ,
                        int                 hrs_fwrd,
                        LocationRect const& loc_rect,
-                       CSVParser&          csv_parser,
+                       JsonParser&         json_parser,
                        const int           timezone)
 : QObject      (),
-  m_pCsvData   (&csv_parser),
+  m_pJson      (&json_parser),
   m_datetime   (date, QTime(hrs_fwrd, 0)),
   m_url        (urlImplode(loc_rect)),
   m_timezone   (timezone),
@@ -108,7 +112,7 @@ void DataEngine::replyFinished(QNetworkReply* reply)
                 file.close();
                 convert   ();
 
-                *m_pCsvData += fileNameUTC(m_timezone).toStdString() + ".csv";
+                m_pJson->csv() += fileNameUTC(m_timezone).toStdString() + ".csv";
             }
         }
     }
@@ -117,9 +121,7 @@ void DataEngine::replyFinished(QNetworkReply* reply)
 
     if(++sm_fileCount >= 16)
     {
-        std::cout << "Line Count: "  << m_pCsvData->lineCount () << std::endl
-                  << "Field Count: " << m_pCsvData->fieldCount() << std::endl;
-
+        m_pJson->save();
         QCoreApplication::quit();
     }
 }

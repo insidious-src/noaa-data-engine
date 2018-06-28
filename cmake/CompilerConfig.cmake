@@ -18,7 +18,7 @@ macro(CHECK_CXX_COMPILER_FLAG _FLAG _RESULT)
          FAIL_REGEX "[Uu]nknown option"                         # HP
          FAIL_REGEX "[Ww]arning: [Oo]ption"                     # SunPro
          FAIL_REGEX "command option .* is not recognized"       # XL
-         FAIL_REGEX "not supported in this configuration; ignored"       # AIX
+         FAIL_REGEX "not supported in this configuration; ignored" # AIX
          FAIL_REGEX "File with unknown suffix passed to linker" # PGI
          FAIL_REGEX "WARNING: unknown flag:"                    # Open64
          )
@@ -47,4 +47,4 @@ else()
 endif()
 
 # use optimized instruction set
-add_definitions(-msse -msse2 -mavx)
+add_definitions(-msse -msse2)

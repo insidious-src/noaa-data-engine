@@ -17,6 +17,7 @@
 #ifndef CSV_H
 #define CSV_H
 
+#include <QtCore/QString>
 #include <string>
 #include <vector>
 
@@ -39,8 +40,8 @@ public:
     { return m_data.empty() ? size_type () : m_data[0].size(); }
 
     template <std::size_t N>
-    string_type get (size_type idx) const
-    { return m_data[idx][N]; }
+    QString get (size_type idx) const
+    { return m_data[idx][N].c_str(); }
 
 private:
     vector_type m_data;
