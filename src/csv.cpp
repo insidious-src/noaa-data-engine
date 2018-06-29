@@ -63,5 +63,9 @@ bool CSVParser::append(string_type const& strFilePath)
         m_data.push_back (record);
     }
 
+    // sort by time
+    std::sort(m_data.begin(), m_data.end(), [](fields_type const& i, fields_type const& j)
+    { return (i[1] < j[1]); });
+
     return true;
 }

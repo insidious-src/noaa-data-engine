@@ -17,7 +17,7 @@
 #include <noaa/dataengine.h>
 #include <noaa/csv.h>
 #include <QtCore/QCoreApplication>
-#include <QtCore/QDebug>
+#include <QtCore/QFile>
 #include <iostream>
 
 namespace {
@@ -35,17 +35,11 @@ static const QString dir        = "&dir=%2Fgfs.";
 
 // ==========================================================
 
-uint DataEngine::sm_fileCount { };
-
-// ==========================================================
-
 DataEngine::DataEngine(QDate const&        date    ,
                        int                 hrs_fwrd,
                        LocationRect const& loc_rect,
-                       JsonParser&         json_parser,
                        const int           timezone)
 : QObject      (),
-  m_pJson      (&json_parser),
   m_datetime   (date, QTime(hrs_fwrd, 0)),
   m_url        (urlImplode(loc_rect)),
   m_timezone   (timezone),
@@ -57,7 +51,7 @@ DataEngine::DataEngine(QDate const&        date    ,
 
 bool DataEngine::download()
 {
-    connect(&m_mgr, SIGNAL(finished(QNetworkReply*)), this, SLOT(replyFinished(QNetworkReply*)));
+    connect(&m_mgr, SIGNAL(finished(QNetworkReply*)), this, SLOT(onReplyFinished(QNetworkReply*)));
 
     return m_mgr.get(QNetworkRequest(m_url))->isFinished();
 }
@@ -76,16 +70,16 @@ bool DataEngine::convert()
         return false;
     }
 
-    m_gWGrib2Proc.start("wgrib2 " + fileNameUTC(m_timezone) + " -undefine out-box " +
+    m_gWGrib2Proc.start("wgrib2 db/" + fileNameUTC(m_timezone) + " -undefine out-box " +
                         m_locRect.toString(0) + ":" + m_locRect.toString(1) + " "   +
                         m_locRect.toString(2) + ":" + m_locRect.toString(3) +
-                        " -csv "  + fileNameUTC(m_timezone) + ".csv");
+                        " -csv db/" + fileNameUTC(m_timezone) + ".csv");
     m_gWGrib2Proc.waitForFinished();
 
     return m_gWGrib2Proc.exitCode() == 0;
 }
 
-void DataEngine::replyFinished(QNetworkReply* reply)
+void DataEngine::onReplyFinished(QNetworkReply* reply)
 {
     if(reply->error())
     {
@@ -101,7 +95,7 @@ void DataEngine::replyFinished(QNetworkReply* reply)
 
         // isolation brackets
         {
-            QFile file(fileNameUTC(m_timezone));
+            QFile file("db/" + fileNameUTC(m_timezone));
 
             if(file.exists()) file.remove();
 
@@ -112,18 +106,12 @@ void DataEngine::replyFinished(QNetworkReply* reply)
                 file.close();
                 convert   ();
 
-                m_pJson->csv() += fileNameUTC(m_timezone).toStdString() + ".csv";
+                emit downloadFinished(file.fileName());
             }
         }
     }
 
     reply->deleteLater();
-
-    if(++sm_fileCount >= 16)
-    {
-        m_pJson->save();
-        QCoreApplication::quit();
-    }
 }
 
 DataEngine::string_type DataEngine::urlImplode(LocationRect const& rect)

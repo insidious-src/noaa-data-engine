@@ -24,9 +24,10 @@
 class CSVParser
 {
 public:
-    typedef std::string                           string_type;
-    typedef std::vector<std::vector<string_type>> vector_type;
-    typedef std::size_t                           size_type  ;
+    typedef std::string              string_type;
+    typedef std::vector<string_type> fields_type;
+    typedef std::vector<fields_type> vector_type;
+    typedef std::size_t              size_type  ;
 
     bool append (string_type const& file_path);
 

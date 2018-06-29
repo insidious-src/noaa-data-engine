@@ -18,19 +18,23 @@
 #define JSON_H
 
 #include <QtCore/QString>
+#include <functional>
 
 class CSVParser;
 
-class JsonParser
+class RedNodeJson
 {
 public:
-    typedef QString string_type;
+    typedef QString                     string_type;
+    typedef std::function<float(float)> func_type  ;
 
     bool save ();
 
-    JsonParser(CSVParser& csv, string_type const& file_path)
+    template <typename Processor>
+    RedNodeJson(CSVParser& csv, string_type const& file_path, Processor fn)
     : m_strFilePath (file_path),
-      m_pCsv  (&csv)
+      m_fn          (fn),
+      m_pCsv        (&csv)
     { }
 
     CSVParser& csv() const noexcept
@@ -38,6 +42,7 @@ public:
 
 private:
     string_type m_strFilePath;
+    func_type   m_fn         ;
     CSVParser*  m_pCsv       ;
 };
 

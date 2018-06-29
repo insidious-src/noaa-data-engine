@@ -24,8 +24,8 @@
 #include <QtCore/QProcess>
 #include <QtCore/QUrl>
 #include <QtCore/QDateTime>
-#include <QtCore/QFile>
 #include <QtCore/QList>
+#include <functional>
 
 union LocationRect
 {
@@ -52,12 +52,12 @@ class DataEngine : public QObject
 {
     Q_OBJECT
 public:
-    typedef QString string_type;
+    typedef std::function<void()> func_type  ;
+    typedef QString               string_type;
 
     DataEngine(QDate const&        date    ,
                int                 hrs_fwrd,
                LocationRect const& loc_rect,
-               JsonParser&         json_parser,
                const int           timezone = 2);
 
     bool download();
@@ -83,12 +83,13 @@ public:
     }
 
 public slots:
-    void replyFinished(QNetworkReply* m_reply);
+    void onReplyFinished(QNetworkReply* reply);
+
+signals:
+    void downloadFinished(string_type const& file_path);
 
 private:
-    static uint          sm_fileCount;
     QNetworkAccessManager m_mgr { this };
-    JsonParser*           m_pJson;
     QDateTime             m_datetime;
     QUrl                  m_url;
     int                   m_timezone;

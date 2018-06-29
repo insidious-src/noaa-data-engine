@@ -42,6 +42,9 @@ public:
                ":" + m_gDateTime.time().toString("mm");
     }
 
+    int hour () const
+    { return m_gDateTime.time().toString("HH").toInt() + m_nTimeZone; }
+
     string_type toString () const
     { return m_gDateTime.toString("yyyy-MM-dd HH:mm:ss"); }
 
@@ -52,8 +55,10 @@ private:
 
 // ==========================================================
 
-bool JsonParser::save ()
+bool RedNodeJson::save ()
 {
+    typedef QPair<string_type, QJsonValue> pair_type;
+
     QFile file (m_strFilePath);
 
     if (file.exists()) file.remove();
@@ -62,28 +67,26 @@ bool JsonParser::save ()
 
     if (!m_pCsv->lineCount() or !m_pCsv->fieldCount() or !file.isOpen()) return false;
 
-    //QJsonObject                fileSection     ;
-    QJsonObject                jsonObjects     ;
-    std::vector<QJsonDocument> jsonSections (2);
+    QJsonObject   jsonObject   ;
+    QJsonDocument jsonDocument ;
+    QJsonArray    jsonDataArray;
 
-    //fileSection.insert("title"    , QJsonValue("DSWRF"));
-    //fileSection.insert("date"     , QJsonValue(TimeZone(m_pCsv->get<0>(0)).toString()));
-    //fileSection.insert("longetude", QJsonValue(m_pCsv->get<4>(0).toDouble()));
-    //fileSection.insert("latitude" , QJsonValue(m_pCsv->get<5>(0).toDouble()));
-
-    //jsonSections.push_back(QJsonDocument(fileSection));
+    jsonObject.insert("series"   , QJsonValue(QJsonArray({ m_pCsv->get<2>(0) })));
+    jsonObject.insert("date"     , QJsonValue(TimeZone(m_pCsv->get<0>(0)).toString()));
+    jsonObject.insert("longitude", QJsonValue(m_pCsv->get<4>(0).toDouble()));
+    jsonObject.insert("latitude" , QJsonValue(m_pCsv->get<5>(0).toDouble()));
 
     for (auto i = 0U; i < m_pCsv->lineCount(); ++i)
     {
-        jsonObjects.insert(TimeZone(m_pCsv->get<1>(i)).toStringUTC(), QJsonValue(m_pCsv->get<6>(i).toInt()));
+        jsonDataArray.append(QJsonValue(QJsonObject({ pair_type("x", TimeZone(m_pCsv->get<1>(i)).hour()),
+                                                      pair_type("y", m_fn(m_pCsv->get<6>(i).toFloat()))
+                                                    })));
     }
 
-    jsonSections.push_back(QJsonDocument(jsonObjects));
+    jsonObject.insert("data"  , QJsonValue(QJsonArray({ QJsonValue(jsonDataArray) })));
+    jsonObject.insert("labels", QJsonValue(QJsonArray()));
+    jsonDocument.setArray(QJsonArray({ QJsonValue(jsonObject) }));
 
-    for (auto i = 0U; i < jsonSections.size(); ++i)
-    {
-        file.write(jsonSections[i].toJson());
-    }
-
+    file.write(jsonDocument.toJson(QJsonDocument::Indented));
     return true;
 }

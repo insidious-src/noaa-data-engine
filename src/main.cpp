@@ -17,7 +17,6 @@
 #include <noaa/csv.h>
 #include <noaa/json.h>
 #include <noaa/dataengine.h>
-//#include <noaa/ipcinterface.h>
 #include <QtCore/QCoreApplication>
 #include <QtCore/QEventLoop>
 #include <memory>
@@ -26,19 +25,42 @@ int main(int argc, char* argv[])
 {
     QCoreApplication gApp(argc, argv);
 
-    std::shared_ptr<DataEngine> gData[16];
+    std::shared_ptr<DataEngine> gData[23];
     CSVParser                   gCSV;
-    JsonParser                  gJson(gCSV, "grib2.json");
 
-    for(auto i = 0, n = 4; n < 20; ++n, ++i)
+    RedNodeJson gJsonRad(gCSV, "db/grib2.json", [](float val)
     {
-        gData[i].reset(new DataEngine(QDate(2018, 6, 26), n, { 24.5f, 24.5f, 43.25f, 43.25f }, gJson));
+        return val;
+    });
+
+    RedNodeJson gJsonPower(gCSV, "db/grib2.power.json", [](float val)
+    {
+        return val * 0.0025;
+    });
+
+    for(auto i = 0; i < 23; ++i)
+    {
+        auto date = QDate::currentDate();
+        date.setDate(date.year(), date.month(), date.day() - 1);
+
+        gData[i].reset(new DataEngine(date, i, { 24.5f, 24.5f, 43.25f, 43.25f }));
+
+        QObject::connect(&(*gData[i]), &DataEngine::downloadFinished, [&](DataEngine::string_type const& file)
+        {
+            static auto count = 0U;
+
+            // append csv file to the database
+            gCSV += file.toStdString() + ".csv";
+            ++count;
+
+            if (count >= 22)
+            {
+                gJsonRad  .save();
+                gJsonPower.save();
+                QCoreApplication::quit();
+            }
+        });
     }
-
-    //QDBusConnection connection = QDBusConnection::sessionBus();
-    //connection.registerService("org.SolarPower");
-
-    //IPCInterface iface(connection);
 
     return gApp.exec();
 }
