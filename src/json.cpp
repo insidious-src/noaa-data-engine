@@ -79,7 +79,7 @@ bool RedNodeJson::save ()
     for (auto i = 0U; i < m_pCsv->lineCount(); ++i)
     {
         jsonDataArray.append(QJsonValue(QJsonObject({ pair_type("x", TimeZone(m_pCsv->get<1>(i)).hour()),
-                                                      pair_type("y", m_fn(m_pCsv->get<6>(i).toFloat()))
+                                                      pair_type("y", m_fn(i))
                                                     })));
     }
 

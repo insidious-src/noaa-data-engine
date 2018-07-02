@@ -28,20 +28,20 @@ int main(int argc, char* argv[])
     std::shared_ptr<DataEngine> gData[23];
     CSVParser                   gCSV;
 
-    RedNodeJson gJsonRad(gCSV, "db/grib2.json", [](float val)
+    RedNodeJson gJsonRad(gCSV, "db/grib2.json", [&](std::size_t idx)
     {
-        return val;
+        return gCSV.get<6>(idx).toDouble();
     });
 
-    RedNodeJson gJsonPower(gCSV, "db/grib2.power.json", [](float val)
+    RedNodeJson gJsonPower(gCSV, "db/grib2.power.json", [&](std::size_t idx)
     {
-        return val * 0.0025;
+        return (gCSV.get<6>(idx).toDouble() * 2.5 / 1000.) * 0.86;
     });
 
     for(auto i = 0; i < 23; ++i)
     {
         auto date = QDate::currentDate();
-        date.setDate(date.year(), date.month(), date.day() - 1);
+        date.setDate(date.year(), date.month(), date.day());
 
         gData[i].reset(new DataEngine(date, i, { 24.5f, 24.5f, 43.25f, 43.25f }));
 

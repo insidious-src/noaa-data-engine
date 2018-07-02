@@ -25,8 +25,9 @@ class CSVParser;
 class RedNodeJson
 {
 public:
-    typedef QString                     string_type;
-    typedef std::function<float(float)> func_type  ;
+    typedef QString                          string_type;
+    typedef std::size_t                      size_type  ;
+    typedef std::function<double(size_type)> func_type  ;
 
     bool save ();
 
