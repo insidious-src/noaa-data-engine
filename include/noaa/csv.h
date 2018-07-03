@@ -34,15 +34,19 @@ public:
     CSVParser& operator += (string_type const& file_path)
     { append(file_path); return *this; }
 
-    size_type lineCount () const noexcept
+    constexpr size_type lineCount () const noexcept
     { return m_data.size(); }
 
-    size_type fieldCount () const noexcept
-    { return m_data.empty() ? size_type () : m_data[0].size(); }
+    template <size_type N = size_type ()>
+    constexpr size_type fieldCount () const noexcept
+    { return m_data.empty() ? size_type () : m_data[N].size(); }
 
-    template <std::size_t N>
+    template <size_type N>
     QString get (size_type idx) const
     { return m_data[idx][N].c_str(); }
+
+    void clear () noexcept
+    { m_data.clear(); }
 
 private:
     vector_type m_data;

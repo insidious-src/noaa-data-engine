@@ -50,7 +50,6 @@ bool CSVParser::append(string_type const& strFilePath)
         record.reserve (static_cast<size_type> (fieldCount) + 1);
         stream.seekg(0);
 
-
         string_type field;
 
         // read each field
