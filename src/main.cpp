@@ -19,48 +19,60 @@
 #include <noaa/dataengine.h>
 #include <QtCore/QCoreApplication>
 #include <QtCore/QEventLoop>
+#include <iostream>
 #include <memory>
 
 int main(int argc, char* argv[])
 {
+    constexpr const auto factor = 0.785;
+    constexpr const auto hours  = 23;
+
     QCoreApplication gApp(argc, argv);
 
-    std::shared_ptr<DataEngine> gData[23];
+    std::shared_ptr<DataEngine> gData[hours];
     CSVParser                   gCSV;
 
-    RedNodeJson gJsonRad(gCSV, "db/grib2.json", [&](std::size_t idx)
+    auto fn = [&]
     {
-        return gCSV.get<6>(idx).toDouble();
-    });
-
-    RedNodeJson gJsonPower(gCSV, "db/grib2.power.json", [&](std::size_t idx)
-    {
-        return (gCSV.get<6>(idx).toDouble() * 2.5 / 1000.) * 0.86;
-    });
-
-    for(auto i = 0; i < 23; ++i)
-    {
-        auto date = QDate::currentDate();
-        date.setDate(date.year(), date.month(), date.day());
-
-        gData[i].reset(new DataEngine(date, i, { 24.5f, 24.5f, 43.25f, 43.25f }));
-
-        QObject::connect(&(*gData[i]), &DataEngine::downloadFinished, [&](DataEngine::string_type const& file)
+        for (auto i = 0; i < hours; ++i)
         {
-            static auto count = 0U;
+            auto date = QDate::currentDate();
+            date.setDate(date.year(), date.month(), date.day());
 
-            // append csv file to the database
-            gCSV += file.toStdString() + ".csv";
-            ++count;
+            gData[i].reset(new DataEngine(date, i, { 24.5f, 24.5f, 43.25f, 43.25f }));
 
-            if (count >= 22)
+            QObject::connect(gData[i].get(), &DataEngine::downloadFinished, [&](DataEngine::string_type const& file)
             {
-                gJsonRad  .save();
-                gJsonPower.save();
-                QCoreApplication::quit();
-            }
-        });
-    }
+                // append csv file to the database
+                gCSV += file.toStdString() + ".csv";
+
+                if (gCSV.lineCount() >= 22)
+                {
+                    RedNodeJson gJsonRad(gCSV, [&](std::size_t idx)
+                    {
+                        return gCSV.get<6>(idx).toDouble();
+                    });
+
+                    RedNodeJson gJsonPower(gCSV, [&](std::size_t idx)
+                    {
+                        return (gCSV.get<6>(idx).toDouble() * 2.4 / 1000.) * factor;
+                    });
+
+                    gJsonRad  .save("db/grib2.json"      );
+                    gJsonPower.save("db/grib2.power.json");
+
+                    gCSV.clear();
+
+                    std::cout << "\nRecords downloaded at "
+                              << QTime::currentTime().toString("HH:mm").toStdString()
+                              << "\n\n";
+                }
+            });
+        }
+    };
+
+    fn();
+    runAt(QTime(0, 1), fn);
 
     return gApp.exec();
 }
