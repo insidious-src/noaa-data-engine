@@ -90,14 +90,11 @@ void DataEngine::onReplyFinished(QNetworkReply* reply)
     {
         std::cout << m_url.toString().toStdString() << std::endl;
         std::cout << reply->header(QNetworkRequest::ContentTypeHeader).toString().toStdString() << std::endl;
-        std::cout << reply->attribute(QNetworkRequest::HttpReasonPhraseAttribute).toString().toStdString()
-                  << std::endl;
 
         // isolation brackets
         {
             QFile file("db/" + fileNameUTC(m_timezone));
-
-            if(file.exists()) file.remove();
+            if (file.exists()) file.remove();
 
             if(file.open(QFile::Append))
             {
