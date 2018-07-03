@@ -55,15 +55,13 @@ private:
 
 // ==========================================================
 
-bool RedNodeJson::save ()
+bool RedNodeJson::save (string_type const& file_path)
 {
     typedef QPair<string_type, QJsonValue> pair_type;
 
-    QFile file (m_strFilePath);
+    QFile file (file_path);
 
-    if (file.exists()) file.remove();
-
-    file.open(QFile::Append);
+    file.open(QFile::Truncate | QFile::WriteOnly);
 
     if (!m_pCsv->lineCount() or !m_pCsv->fieldCount() or !file.isOpen()) return false;
 

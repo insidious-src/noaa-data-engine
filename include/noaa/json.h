@@ -29,22 +29,20 @@ public:
     typedef std::size_t                      size_type  ;
     typedef std::function<double(size_type)> func_type  ;
 
-    bool save ();
+    bool save (string_type const& file_path);
 
     template <typename Processor>
-    RedNodeJson(CSVParser& csv, string_type const& file_path, Processor fn)
-    : m_strFilePath (file_path),
-      m_fn          (fn),
-      m_pCsv        (&csv)
+    RedNodeJson(CSVParser& csv, Processor fn)
+    : m_fn  (fn),
+      m_pCsv(&csv)
     { }
 
     CSVParser& csv() const noexcept
     { return *m_pCsv; }
 
 private:
-    string_type m_strFilePath;
-    func_type   m_fn         ;
-    CSVParser*  m_pCsv       ;
+    func_type  m_fn  ;
+    CSVParser* m_pCsv;
 };
 
 #endif // JSON_H
