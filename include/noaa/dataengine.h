@@ -21,11 +21,44 @@
 #include <QtNetwork/QNetworkAccessManager>
 #include <QtNetwork/QNetworkRequest>
 #include <QtNetwork/QNetworkReply>
+#include <QtCore/QAbstractEventDispatcher>
 #include <QtCore/QProcess>
 #include <QtCore/QUrl>
 #include <QtCore/QDateTime>
+#include <QtCore/QTimer>
 #include <QtCore/QList>
 #include <functional>
+#include <memory>
+
+inline int msecsTo (const QTime & at)
+{
+    constexpr const int msecsPerDay = 24 * 60 * 60 * 1000;
+    int msecs = QTime::currentTime().msecsTo(at);
+
+    if (msecs < 0) msecs += msecsPerDay;
+    return msecs;
+}
+
+template <typename Processor>
+inline void runAt (QTime const& at, Processor job)
+{
+    // Timer ownership prevents timer leak when the thread terminates.
+    auto timer = std::make_shared<QTimer>(QAbstractEventDispatcher::instance());
+
+    timer->setTimerType(Qt::CoarseTimer);
+    timer->start(msecsTo(at));
+
+    auto conn = std::make_shared<QMetaObject::Connection>();
+
+    *conn = QObject::connect(timer.get(), &QTimer::timeout, [job, conn, timer]
+    {
+        job();
+        //QObject::disconnect(*conn);
+        timer->deleteLater();
+    });
+}
+
+// ================================================================
 
 union LocationRect
 {
