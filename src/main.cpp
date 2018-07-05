@@ -19,8 +19,10 @@
 #include <noaa/dataengine.h>
 #include <QtCore/QCoreApplication>
 #include <QtCore/QEventLoop>
+#include <QtCore/QFile>
 #include <iostream>
 #include <memory>
+#include <functional>
 
 int main(int argc, char* argv[])
 {
@@ -34,6 +36,8 @@ int main(int argc, char* argv[])
 
     auto fn = [&]
     {
+        std::cout << "requesting " << hours << " downloads...\n";
+
         for (auto i = 0; i < hours; ++i)
         {
             auto date = QDate::currentDate();
@@ -41,10 +45,19 @@ int main(int argc, char* argv[])
 
             gData[i].reset(new DataEngine(date, i, { 24.5f, 24.5f, 43.25f, 43.25f }));
 
+            QObject::connect(gData[i].get(), &DataEngine::downloadFailed, [&]
+            {
+                std::cout << "\nRecords FAILED to download at "
+                          << QTime::currentTime().toString("HH:mm").toStdString()
+                          << "\n\n";
+            });
+
             QObject::connect(gData[i].get(), &DataEngine::downloadFinished, [&](DataEngine::string_type const& file)
             {
                 // append csv file to the database
                 gCSV += file.toStdString() + ".csv";
+
+                QFile(file).remove();
 
                 if (gCSV.lineCount() >= 22)
                 {
@@ -58,8 +71,14 @@ int main(int argc, char* argv[])
                         return (gCSV.get<6>(idx).toDouble() * 2.4 / 1000.) * factor;
                     });
 
-                    gJsonRad  .save("db/grib2.json"      );
-                    gJsonPower.save("db/grib2.power.json");
+                    auto jsonRadDoc   = gJsonRad  .parse();
+                    auto jsonPowerDoc = gJsonPower.parse();
+
+                    gJsonRad.save(jsonRadDoc, "db/grib2.rad.json");
+                    gJsonRad.save(jsonRadDoc, "db/grib2." + gJsonRad.csv().dateToString() + ".rad.json");
+
+                    gJsonPower.save(jsonPowerDoc, "db/grib2.power.json");
+                    gJsonPower.save(jsonPowerDoc, "db/grib2." + gJsonRad.csv().dateToString() + ".power.json");
 
                     gCSV.clear();
 
@@ -71,8 +90,23 @@ int main(int argc, char* argv[])
         }
     };
 
-    fn();
-    runAt(QTime(0, 1), fn);
 
+    std::function<void()> scheduler;
+
+    scheduler = [&]{
+        auto time = QTime::currentTime();
+
+        for (auto h = time.hour(); h < 24; ++h)
+        {
+            for (auto m = time.minute(); m < 60; m += 24)
+            {
+                time.setHMS(h, m, 0);
+                runAt(time, fn);
+            }
+        }
+    };
+
+    fn       ();
+    scheduler();
     return gApp.exec();
 }
