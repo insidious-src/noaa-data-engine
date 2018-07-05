@@ -19,6 +19,8 @@
 #include <QtCore/QCoreApplication>
 #include <QtCore/QFile>
 #include <iostream>
+#include <thread>
+#include <chrono>
 
 namespace {
 
@@ -30,6 +32,8 @@ static const QString rightlon   = "&rightlon="  ;
 static const QString toplat     = "&toplat="    ;
 static const QString bottomlat  = "&bottomlat=" ;
 static const QString dir        = "&dir=%2Fgfs.";
+
+constexpr const auto ConnectionRetries = 3U;
 
 } // anonymous
 
@@ -44,7 +48,8 @@ DataEngine::DataEngine(QDate const&        date    ,
   m_url        (urlImplode(loc_rect)),
   m_timezone   (timezone),
   m_locRect    (loc_rect),
-  m_gWGrib2Proc(this)
+  m_gWGrib2Proc(this),
+  m_uTries     ()
 {
     download();
 }
@@ -52,6 +57,8 @@ DataEngine::DataEngine(QDate const&        date    ,
 bool DataEngine::download()
 {
     connect(&m_mgr, SIGNAL(finished(QNetworkReply*)), this, SLOT(onReplyFinished(QNetworkReply*)));
+
+    if (m_uTries >= ConnectionRetries) m_uTries = 0;
 
     return m_mgr.get(QNetworkRequest(m_url))->isFinished();
 }
@@ -76,27 +83,26 @@ bool DataEngine::convert()
                         " -csv db/" + fileNameUTC(m_timezone) + ".csv");
     m_gWGrib2Proc.waitForFinished();
 
-    return m_gWGrib2Proc.exitCode() == 0;
+    auto ret = m_gWGrib2Proc.exitCode() == 0;
+
+    if (ret) std::cout << fileNameUTC(m_timezone).toStdString() << " converted with time zone UTC"
+                       << (m_timezone >= 0 ? " + " : " - ") << std::to_string(m_timezone) << std::endl;
+    return ret;
 }
 
 void DataEngine::onReplyFinished(QNetworkReply* reply)
 {
-    if(reply->error())
+    switch (reply->error())
     {
-        std::cout << "ERROR!" << std::endl;
-        std::cout << reply->errorString().toStdString() << std::endl;
-    }
-    else
-    {
-        std::cout << m_url.toString().toStdString() << std::endl;
+    case QNetworkReply::NoError:
+        std::cout << m_url.toString().toStdString() << " successfully downloaded\n";
         std::cout << reply->header(QNetworkRequest::ContentTypeHeader).toString().toStdString() << std::endl;
 
         // isolation brackets
         {
             QFile file("db/" + fileNameUTC(m_timezone));
-            if (file.exists()) file.remove();
 
-            if(file.open(QFile::Append))
+            if(file.open(QFile::Truncate | QFile::WriteOnly))
             {
                 file.write(reply->readAll());
                 file.flush();
@@ -106,6 +112,20 @@ void DataEngine::onReplyFinished(QNetworkReply* reply)
                 emit downloadFinished(file.fileName());
             }
         }
+        break;
+    default:
+        std::cout << "ERROR!" << std::endl;
+        std::cout << reply->errorString().toStdString() << std::endl;
+    case QNetworkReply::HostNotFoundError: case QNetworkReply::TimeoutError:
+        std::cout << "\nRetrying connection...\n";
+
+        if(m_uTries++ < ConnectionRetries)
+        {
+            std::this_thread::sleep_for(std::chrono::seconds(3));
+            download();
+        }
+        else emit downloadFailed();
+        break;
     }
 
     reply->deleteLater();

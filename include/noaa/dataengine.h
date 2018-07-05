@@ -53,7 +53,7 @@ inline void runAt (QTime const& at, Processor job)
     *conn = QObject::connect(timer.get(), &QTimer::timeout, [job, conn, timer]
     {
         job();
-        //QObject::disconnect(*conn);
+        QObject::disconnect(*conn);
         timer->deleteLater();
     });
 }
@@ -120,6 +120,7 @@ public slots:
 
 signals:
     void downloadFinished(string_type const& file_path);
+    void downloadFailed  ();
 
 private:
     QNetworkAccessManager m_mgr { this };
@@ -128,6 +129,7 @@ private:
     int                   m_timezone;
     LocationRect          m_locRect;
     QProcess              m_gWGrib2Proc;
+    unsigned char         m_uTries;
 
     string_type urlImplode(LocationRect const& coord);
 };
