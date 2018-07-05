@@ -24,7 +24,6 @@
 #include <QtCore/QJsonValue>
 #include <QtCore/QJsonArray>
 #include <QtCore/QJsonObject>
-#include <QtCore/QJsonDocument>
 
 class TimeZone
 {
@@ -55,15 +54,11 @@ private:
 
 // ==========================================================
 
-bool RedNodeJson::save (string_type const& file_path)
+QJsonDocument RedNodeJson::parse ()
 {
     typedef QPair<string_type, QJsonValue> pair_type;
 
-    QFile file (file_path);
-
-    file.open(QFile::Truncate | QFile::WriteOnly);
-
-    if (!m_pCsv->lineCount() or !m_pCsv->fieldCount() or !file.isOpen()) return false;
+    if (!m_pCsv->lineCount() or !m_pCsv->fieldCount()) return QJsonDocument();
 
     QJsonObject   jsonObject   ;
     QJsonDocument jsonDocument ;
@@ -84,7 +79,29 @@ bool RedNodeJson::save (string_type const& file_path)
     jsonObject.insert("data"  , QJsonValue(QJsonArray({ QJsonValue(jsonDataArray) })));
     jsonObject.insert("labels", QJsonValue(QJsonArray()));
     jsonDocument.setArray(QJsonArray({ QJsonValue(jsonObject) }));
+    return jsonDocument;
+}
 
-    file.write(jsonDocument.toJson(QJsonDocument::Indented));
+bool RedNodeJson::save (QJsonDocument const& json, string_type const& file_path)
+{
+    QFile file (file_path);
+
+    file.open(QFile::Truncate | QFile::WriteOnly);
+
+    if (!file.isOpen()) return false;
+    file.write(json.toJson());
+    file.flush();
+    return true;
+}
+
+bool RedNodeJson::save (string_type const& file_path)
+{
+    QFile file (file_path);
+
+    file.open(QFile::Truncate | QFile::WriteOnly);
+
+    if (!file.isOpen()) return false;
+    file.write(parse().toJson());
+    file.flush();
     return true;
 }

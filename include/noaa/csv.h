@@ -18,6 +18,7 @@
 #define CSV_H
 
 #include <QtCore/QString>
+#include <QtCore/QDateTime>
 #include <string>
 #include <vector>
 
@@ -44,6 +45,9 @@ public:
     template <size_type N>
     QString get (size_type idx) const
     { return m_data[idx][N].c_str(); }
+
+    QString dateToString () const
+    { return QDateTime::fromString(get<0>(1), "\"yyyy-MM-dd HH:mm:ss\"").toString("yyyy-MM-dd"); }
 
     void clear () noexcept
     { m_data.clear(); }

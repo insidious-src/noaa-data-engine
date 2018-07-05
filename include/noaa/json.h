@@ -18,6 +18,7 @@
 #define JSON_H
 
 #include <QtCore/QString>
+#include <QtCore/QJsonDocument>
 #include <functional>
 
 class CSVParser;
@@ -29,11 +30,14 @@ public:
     typedef std::size_t                      size_type  ;
     typedef std::function<double(size_type)> func_type  ;
 
-    bool save (string_type const& file_path);
+    RedNodeJson () = delete;
+    QJsonDocument parse();
+    bool save(QJsonDocument const& json, string_type const& file_path);
+    bool save(string_type const& file_path);
 
     template <typename Processor>
     RedNodeJson(CSVParser& csv, Processor fn)
-    : m_fn  (fn),
+    : m_fn  (fn  ),
       m_pCsv(&csv)
     { }
 
